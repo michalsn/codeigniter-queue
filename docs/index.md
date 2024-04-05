@@ -18,6 +18,7 @@ Listen for queued jobs.
 - CodeIgniter 4.3+
 
 If you use `database` handler:
+
 - MySQL 8.0.1+
 - MariaDB 10.6+
 - PostgreSQL 9.5+
