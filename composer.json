@@ -26,7 +26,10 @@
     "autoload": {
         "psr-4": {
             "CodeIgniter\\Queue\\": "src"
-        }
+        },
+        "exclude-from-classmap": [
+            "**/Database/Migrations/**"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
