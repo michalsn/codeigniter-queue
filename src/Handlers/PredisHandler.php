@@ -123,7 +123,7 @@ class PredisHandler extends BaseHandler implements QueueInterface
 
         $result = $this->predis->zadd(
             "queues:{$queueJob->queue}:{$queueJob->priority}",
-            [json_encode($queueJob) => $queueJob->available_at->timestamp]
+            [json_encode($queueJob) => $queueJob->available_at->timestamp],
         );
         if ($result !== 0) {
             $this->predis->hdel("queues:{$queueJob->queue}::reserved", [$queueJob->id]);

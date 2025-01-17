@@ -145,7 +145,7 @@ class RedisHandler extends BaseHandler implements QueueInterface
         $result = (int) $this->redis->zAdd(
             "queues:{$queueJob->queue}:{$queueJob->priority}",
             $queueJob->available_at->timestamp,
-            json_encode($queueJob)
+            json_encode($queueJob),
         );
         if ($result !== 0) {
             $this->redis->hDel("queues:{$queueJob->queue}::reserved", (string) $queueJob->id);

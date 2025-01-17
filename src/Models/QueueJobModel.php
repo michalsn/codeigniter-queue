@@ -141,22 +141,22 @@ class QueueJobModel extends Model
                     sprintf('CASE %s ', $this->db->protectIdentifiers('priority'))
                     . implode(
                         ' ',
-                        array_map(static fn ($value, $key) => "WHEN '{$value}' THEN {$key}", $priority, array_keys($priority))
+                        array_map(static fn ($value, $key) => "WHEN '{$value}' THEN {$key}", $priority, array_keys($priority)),
                     )
                     . ' END',
                     '',
-                    false
+                    false,
                 );
             } else {
                 $builder->orderBy(
                     'FIELD(priority, '
                     . implode(
                         ',',
-                        array_map(static fn ($value) => "'{$value}'", $priority)
+                        array_map(static fn ($value) => "'{$value}'", $priority),
                     )
                     . ')',
                     '',
-                    false
+                    false,
                 );
             }
         }

@@ -37,5 +37,5 @@ $options = [
 return Factory::create(new CodeIgniter4(), $overrides, $options)->forLibrary(
     'CodeIgniter Queue',
     'CodeIgniter Foundation',
-    'admin@codeigniter.com'
+    'admin@codeigniter.com',
 );
