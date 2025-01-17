@@ -56,10 +56,10 @@ class DatabaseHandler extends BaseHandler implements QueueInterface
             'priority'     => $this->priority,
             'status'       => Status::PENDING->value,
             'attempts'     => 0,
-            'available_at' => Time::now(),
+            'available_at' => Time::now()->addSeconds($this->delay ?? 0),
         ]);
 
-        $this->priority = null;
+        $this->priority = $this->delay = null;
 
         return $this->jobModel->insert($queueJob, false);
     }

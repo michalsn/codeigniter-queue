@@ -112,6 +112,9 @@ final class DatabaseHandlerTest extends TestCase
         ]);
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testPushAndPopWithPriority(): void
     {
         Time::setTestNow('2023-12-29 14:15:16');
@@ -143,6 +146,67 @@ final class DatabaseHandlerTest extends TestCase
         $this->assertSame($payload, $result->payload);
 
         $result = $handler->pop('queue', ['high', 'low']);
+        $this->assertInstanceOf(QueueJob::class, $result);
+        $payload = ['job' => 'success', 'data' => ['key1' => 'value1']];
+        $this->assertSame($payload, $result->payload);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testPushWithDelay(): void
+    {
+        Time::setTestNow('2023-12-29 14:15:16');
+
+        $handler = new DatabaseHandler($this->config);
+        $result  = $handler->setDelay(MINUTE)->push('queue-delay', 'success', ['key' => 'value']);
+
+        $this->assertTrue($result);
+        $this->seeInDatabase('queue_jobs', [
+            'queue'        => 'queue-delay',
+            'payload'      => json_encode(['job' => 'success', 'data' => ['key' => 'value']]),
+            'available_at' => 1703859376,
+        ]);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testPushAndPopWithDelay(): void
+    {
+        Time::setTestNow('2023-12-29 14:15:16');
+
+        $handler = new DatabaseHandler($this->config);
+        $result  = $handler->setDelay(MINUTE)->push('queue-delay', 'success', ['key1' => 'value1']);
+
+        $this->assertTrue($result);
+        $this->seeInDatabase('queue_jobs', [
+            'queue'        => 'queue-delay',
+            'payload'      => json_encode(['job' => 'success', 'data' => ['key1' => 'value1']]),
+            'available_at' => 1703859376,
+        ]);
+
+        $result = $handler->push('queue-delay', 'success', ['key2' => 'value2']);
+
+        $this->assertTrue($result);
+        $this->seeInDatabase('queue_jobs', [
+            'queue'        => 'queue-delay',
+            'payload'      => json_encode(['job' => 'success', 'data' => ['key2' => 'value2']]),
+            'available_at' => 1703859316,
+        ]);
+
+        $result = $handler->pop('queue-delay', ['default']);
+        $this->assertInstanceOf(QueueJob::class, $result);
+        $payload = ['job' => 'success', 'data' => ['key2' => 'value2']];
+        $this->assertSame($payload, $result->payload);
+
+        $result = $handler->pop('queue-delay', ['default']);
+        $this->assertNull($result);
+
+        // add 1 minute
+        Time::setTestNow('2023-12-29 14:16:16');
+
+        $result = $handler->pop('queue-delay', ['default']);
         $this->assertInstanceOf(QueueJob::class, $result);
         $payload = ['job' => 'success', 'data' => ['key1' => 'value1']];
         $this->assertSame($payload, $result->payload);

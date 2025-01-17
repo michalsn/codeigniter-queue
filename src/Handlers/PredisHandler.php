@@ -64,6 +64,8 @@ class PredisHandler extends BaseHandler implements QueueInterface
 
         helper('text');
 
+        $availableAt = Time::now()->addSeconds($this->delay ?? 0);
+
         $queueJob = new QueueJob([
             'id'           => random_string('numeric', 16),
             'queue'        => $queue,
@@ -71,12 +73,12 @@ class PredisHandler extends BaseHandler implements QueueInterface
             'priority'     => $this->priority,
             'status'       => Status::PENDING->value,
             'attempts'     => 0,
-            'available_at' => Time::now(),
+            'available_at' => $availableAt,
         ]);
 
-        $result = $this->predis->zadd("queues:{$queue}:{$this->priority}", [json_encode($queueJob) => Time::now()->timestamp]);
+        $result = $this->predis->zadd("queues:{$queue}:{$this->priority}", [json_encode($queueJob) => $availableAt->timestamp]);
 
-        $this->priority = null;
+        $this->priority = $this->delay = null;
 
         return $result > 0;
     }

@@ -51,4 +51,9 @@ final class QueueException extends RuntimeException
     {
         return new self(lang('Queue.incorrectQueuePriority', [$priority, $queue]));
     }
+
+    public static function forIncorrectDelayValue(): static
+    {
+        return new self(lang('Queue.incorrectDelayValue'));
+    }
 }

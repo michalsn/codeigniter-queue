@@ -29,6 +29,7 @@ abstract class BaseHandler
 {
     protected QueueConfig $config;
     protected ?string $priority = null;
+    protected ?int $delay       = null;
 
     abstract public function name(): string;
 
@@ -58,6 +59,20 @@ abstract class BaseHandler
         }
 
         $this->priority = $priority;
+
+        return $this;
+    }
+
+    /**
+     * Set delay for job queue (in seconds).
+     */
+    public function setDelay(int $delay): static
+    {
+        if ($delay < 0) {
+            throw QueueException::forIncorrectDelayValue();
+        }
+
+        $this->delay = $delay;
 
         return $this;
     }
