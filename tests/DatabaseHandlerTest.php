@@ -212,6 +212,15 @@ final class DatabaseHandlerTest extends TestCase
         $this->assertSame($payload, $result->payload);
     }
 
+    public function testPushWithDelayException(): void
+    {
+        $this->expectException(QueueException::class);
+        $this->expectExceptionMessage('The number of seconds of delay must be a positive integer.');
+
+        $handler = new DatabaseHandler($this->config);
+        $handler->setDelay(-60);
+    }
+
     /**
      * @throws ReflectionException
      */
