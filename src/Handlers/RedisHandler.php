@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace CodeIgniter\Queue\Handlers;
 
+use CodeIgniter\Autoloader\FileLocator;
 use CodeIgniter\Exceptions\CriticalError;
 use CodeIgniter\I18n\Time;
 use CodeIgniter\Queue\Config\Queue as QueueConfig;
@@ -27,6 +28,7 @@ use Throwable;
 class RedisHandler extends BaseHandler implements QueueInterface
 {
     private readonly Redis $redis;
+    private readonly string $luaScript;
 
     public function __construct(protected QueueConfig $config)
     {
@@ -48,6 +50,13 @@ class RedisHandler extends BaseHandler implements QueueInterface
             if (isset($config->redis['prefix']) && ! $this->redis->setOption(Redis::OPT_PREFIX, $config->redis['prefix'])) {
                 throw new CriticalError('Queue: Redis setting prefix failed.');
             }
+
+            $locator   = new FileLocator(service('autoloader'));
+            $luaScript = $locator->locateFile('CodeIgniter\Queue\Lua\pop_task', null, 'lua');
+            if ($luaScript === false) {
+                throw new CriticalError('Queue: LUA script for Redis is not available.');
+            }
+            $this->luaScript = file_get_contents($luaScript);
         } catch (RedisException $e) {
             throw new CriticalError('Queue: RedisException occurred with message (' . $e->getMessage() . ').');
         }
@@ -96,23 +105,23 @@ class RedisHandler extends BaseHandler implements QueueInterface
      */
     public function pop(string $queue, array $priorities): ?QueueJob
     {
-        $tasks = [];
-        $now   = Time::now()->timestamp;
+        $now = Time::now()->timestamp;
 
-        foreach ($priorities as $priority) {
-            if ($tasks = $this->redis->zRangeByScore("queues:{$queue}:{$priority}", '-inf', (string) $now, ['limit' => [0, 1]])) {
-                if ($this->redis->zRem("queues:{$queue}:{$priority}", ...$tasks)) {
-                    break;
-                }
-                $tasks = [];
-            }
-        }
+        // Prepare the arguments for the Lua script
+        $args = [
+            'queues:' . $queue,       // KEYS[1]
+            $now,                     // ARGV[2]
+            json_encode($priorities), // ARGV[3]
+        ];
 
-        if ($tasks === []) {
+        // Execute the Lua script
+        $task = $this->redis->eval($this->luaScript, $args, 1);
+
+        if ($task === false) {
             return null;
         }
 
-        $queueJob = new QueueJob(json_decode((string) $tasks[0], true));
+        $queueJob = new QueueJob(json_decode((string) $task, true));
 
         // Set the actual status as in DB.
         $queueJob->status = Status::RESERVED->value;
@@ -136,7 +145,7 @@ class RedisHandler extends BaseHandler implements QueueInterface
         $result = (int) $this->redis->zAdd(
             "queues:{$queueJob->queue}:{$queueJob->priority}",
             $queueJob->available_at->timestamp,
-            json_encode($queueJob)
+            json_encode($queueJob),
         );
         if ($result !== 0) {
             $this->redis->hDel("queues:{$queueJob->queue}::reserved", (string) $queueJob->id);

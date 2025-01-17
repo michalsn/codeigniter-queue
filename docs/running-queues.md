@@ -65,11 +65,13 @@ This way, worker will consume jobs with the `low` priority and then with `high`.
 
 ### Running many instances of the same queue
 
-As mentioned above, sometimes we may want to have multiple instances of the same command running at the same time. The queue is safe to use in that scenario with all databases if you keep the `skipLocked` to `true` in the config file. Only for SQLite3 driver this setting is not relevant.
+As mentioned above, sometimes we may want to have multiple instances of the same command running at the same time. The queue is safe to use in that scenario with all databases as long as you keep the `skipLocked` to `true` in the config file. Only for SQLite3 driver, this setting is not relevant as it provides atomicity without the need for explicit concurrency control.
+
+The PHPRedis and Predis drivers are also safe to use with multiple instances of the same command.
 
 ### Handling long-running process
 
-If we decide to run the long process e.g. with the command:
+If we decide to run the long process, e.g., with the command:
 
     php spark queue:work emails -wait 10
 

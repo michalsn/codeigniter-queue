@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace CodeIgniter\Queue\Handlers;
 
+use CodeIgniter\Autoloader\FileLocator;
 use CodeIgniter\Exceptions\CriticalError;
 use CodeIgniter\I18n\Time;
 use CodeIgniter\Queue\Config\Queue as QueueConfig;
@@ -27,12 +28,20 @@ use Throwable;
 class PredisHandler extends BaseHandler implements QueueInterface
 {
     private readonly Client $predis;
+    private readonly string $luaScript;
 
     public function __construct(protected QueueConfig $config)
     {
         try {
             $this->predis = new Client($config->predis, ['prefix' => $config->predis['prefix']]);
             $this->predis->time();
+
+            $locator   = new FileLocator(service('autoloader'));
+            $luaScript = $locator->locateFile('CodeIgniter\Queue\Lua\pop_task', null, 'lua');
+            if ($luaScript === false) {
+                throw new CriticalError('Queue: LUA script for Predis is not available.');
+            }
+            $this->luaScript = file_get_contents($luaScript);
         } catch (Exception $e) {
             throw new CriticalError('Queue: Predis connection refused (' . $e->getMessage() . ').');
         }
@@ -77,30 +86,23 @@ class PredisHandler extends BaseHandler implements QueueInterface
      */
     public function pop(string $queue, array $priorities): ?QueueJob
     {
-        $tasks = [];
-        $now   = Time::now()->timestamp;
+        $now = (string) Time::now()->timestamp;
 
-        foreach ($priorities as $priority) {
-            $tasks = $this->predis->zrangebyscore(
-                "queues:{$queue}:{$priority}",
-                '-inf',
-                $now,
-                ['LIMIT' => [0, 1]]
-            );
-            if ($tasks !== []) {
-                $removed = $this->predis->zrem("queues:{$queue}:{$priority}", ...$tasks);
-                if ($removed !== 0) {
-                    break;
-                }
-                $tasks = [];
-            }
-        }
+        // Prepare the arguments for the Lua script
+        $args = [
+            'queues:' . $queue,       // KEYS[1]
+            $now,                     // ARGV[2]
+            json_encode($priorities), // ARGV[3]
+        ];
 
-        if ($tasks === []) {
+        // Execute the Lua script
+        $task = $this->predis->eval($this->luaScript, 1, ...$args);
+
+        if ($task === null) {
             return null;
         }
 
-        $queueJob = new QueueJob(json_decode((string) $tasks[0], true));
+        $queueJob = new QueueJob(json_decode((string) $task, true));
 
         // Set the actual status as in DB.
         $queueJob->status = Status::RESERVED->value;
@@ -121,7 +123,7 @@ class PredisHandler extends BaseHandler implements QueueInterface
 
         $result = $this->predis->zadd(
             "queues:{$queueJob->queue}:{$queueJob->priority}",
-            [json_encode($queueJob) => $queueJob->available_at->timestamp]
+            [json_encode($queueJob) => $queueJob->available_at->timestamp],
         );
         if ($result !== 0) {
             $this->predis->hdel("queues:{$queueJob->queue}::reserved", [$queueJob->id]);

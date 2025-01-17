@@ -72,11 +72,11 @@ abstract class BaseHandler
         $jobs = model(QueueJobFailedModel::class)
             ->when(
                 $id !== null,
-                static fn ($query) => $query->where('id', $id)
+                static fn ($query) => $query->where('id', $id),
             )
             ->when(
                 $queue !== null,
-                static fn ($query) => $query->where('queue', $queue)
+                static fn ($query) => $query->where('queue', $queue),
             )
             ->findAll();
 
@@ -112,11 +112,11 @@ abstract class BaseHandler
         return model(QueueJobFailedModel::class)
             ->when(
                 $hours !== null,
-                static fn ($query) => $query->where('failed_at <=', Time::now()->subHours($hours)->timestamp)
+                static fn ($query) => $query->where('failed_at <=', Time::now()->subHours($hours)->timestamp),
             )
             ->when(
                 $queue !== null,
-                static fn ($query) => $query->where('queue', $queue)
+                static fn ($query) => $query->where('queue', $queue),
             )
             ->delete();
     }
@@ -129,7 +129,7 @@ abstract class BaseHandler
         return model(QueueJobFailedModel::class)
             ->when(
                 $queue !== null,
-                static fn ($query) => $query->where('queue', $queue)
+                static fn ($query) => $query->where('queue', $queue),
             )
             ->orderBy('failed_at', 'desc')
             ->findAll();

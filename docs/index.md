@@ -26,6 +26,11 @@ If you use `database` handler:
 - Oracle 12.1+
 - SQLite3
 
+If you use `Redis` (you still need a relational database to store failed jobs):
+
+- PHPRedis
+- Predis
+
 ### Table of Contents
 
 * [Installation](installation.md)

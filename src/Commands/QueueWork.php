@@ -108,7 +108,7 @@ class QueueWork extends BaseCommand
             $memory,
             $priority,
             $tries,
-            $retryAfter
+            $retryAfter,
         ] = $this->readOptions($params, $config, $queue);
 
         if ($error !== null) {
