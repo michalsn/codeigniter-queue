@@ -2,7 +2,11 @@
 
 A library that helps you handle Queues in the CodeIgniter 4 framework.
 
-Add job to the queue.
+!!! info "What are queues used for?"
+
+    A queue system is typically used to handle resource-intensive or time-consuming tasks (e.g., image processing, sending emails) that are to be run in the background. It can also be a way to postpone certain activities that are to be executed automatically later.
+
+Add a job to the queue.
 
 ```php
 service('queue')->push('queueName', 'jobName', ['array' => 'parameters']);

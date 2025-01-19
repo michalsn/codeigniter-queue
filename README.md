@@ -11,6 +11,9 @@ Queues for the CodeIgniter 4 framework.
 ![CodeIgniter](https://img.shields.io/badge/CodeIgniter-%5E4.3-blue)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
+> [!NOTE]
+> A queue system is typically used to handle resource-intensive or time-consuming tasks (e.g., image processing, sending emails) that are to be run in the background. It can also be a way to postpone certain activities that are to be executed automatically later.
+
 ## Installation
 
     composer require codeigniter4/queue
