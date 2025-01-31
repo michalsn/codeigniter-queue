@@ -152,7 +152,7 @@ final class DatabaseHandlerTest extends TestCase
     }
 
     /**
-     * @throws ReflectionException
+     * @throws Exception
      */
     public function testPushWithDelay(): void
     {
@@ -162,11 +162,16 @@ final class DatabaseHandlerTest extends TestCase
         $result  = $handler->setDelay(MINUTE)->push('queue-delay', 'success', ['key' => 'value']);
 
         $this->assertTrue($result);
+
+        $availableAt = 1703859376;
+
         $this->seeInDatabase('queue_jobs', [
             'queue'        => 'queue-delay',
             'payload'      => json_encode(['job' => 'success', 'data' => ['key' => 'value']]),
-            'available_at' => 1703859376,
+            'available_at' => $availableAt,
         ]);
+
+        $this->assertEqualsWithDelta(MINUTE, $availableAt - Time::now()->getTimestamp(), 1);
     }
 
     public function testPushWithDelayException(): void
