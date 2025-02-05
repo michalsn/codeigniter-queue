@@ -81,6 +81,8 @@ class RedisHandler extends BaseHandler implements QueueInterface
 
         helper('text');
 
+        $availableAt = Time::now()->addSeconds($this->delay ?? 0);
+
         $queueJob = new QueueJob([
             'id'           => random_string('numeric', 16),
             'queue'        => $queue,
@@ -88,12 +90,12 @@ class RedisHandler extends BaseHandler implements QueueInterface
             'priority'     => $this->priority,
             'status'       => Status::PENDING->value,
             'attempts'     => 0,
-            'available_at' => Time::now(),
+            'available_at' => $availableAt,
         ]);
 
-        $result = (int) $this->redis->zAdd("queues:{$queue}:{$this->priority}", Time::now()->timestamp, json_encode($queueJob));
+        $result = (int) $this->redis->zAdd("queues:{$queue}:{$this->priority}", $availableAt->timestamp, json_encode($queueJob));
 
-        $this->priority = null;
+        $this->priority = $this->delay = null;
 
         return $result > 0;
     }

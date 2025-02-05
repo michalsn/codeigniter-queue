@@ -112,6 +112,9 @@ final class DatabaseHandlerTest extends TestCase
         ]);
     }
 
+    /**
+     * @throws ReflectionException
+     */
     public function testPushAndPopWithPriority(): void
     {
         Time::setTestNow('2023-12-29 14:15:16');
@@ -146,6 +149,38 @@ final class DatabaseHandlerTest extends TestCase
         $this->assertInstanceOf(QueueJob::class, $result);
         $payload = ['job' => 'success', 'data' => ['key1' => 'value1']];
         $this->assertSame($payload, $result->payload);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testPushWithDelay(): void
+    {
+        Time::setTestNow('2023-12-29 14:15:16');
+
+        $handler = new DatabaseHandler($this->config);
+        $result  = $handler->setDelay(MINUTE)->push('queue-delay', 'success', ['key' => 'value']);
+
+        $this->assertTrue($result);
+
+        $availableAt = 1703859376;
+
+        $this->seeInDatabase('queue_jobs', [
+            'queue'        => 'queue-delay',
+            'payload'      => json_encode(['job' => 'success', 'data' => ['key' => 'value']]),
+            'available_at' => $availableAt,
+        ]);
+
+        $this->assertEqualsWithDelta(MINUTE, $availableAt - Time::now()->getTimestamp(), 1);
+    }
+
+    public function testPushWithDelayException(): void
+    {
+        $this->expectException(QueueException::class);
+        $this->expectExceptionMessage('The number of seconds of delay must be a positive integer.');
+
+        $handler = new DatabaseHandler($this->config);
+        $handler->setDelay(-60);
     }
 
     /**

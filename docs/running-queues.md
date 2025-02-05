@@ -12,7 +12,7 @@ This will cause command to check for the new jobs every 10 seconds if the queue 
 
 ### With CRON
 
-Using queues with CRON is more challenging, but definitely doable. You can use command like this:
+Using queues with CRON is more challenging but definitely doable. You can use command like this:
 
     php spark queue:work emails -max-jobs 20 --stop-when-empty
 
@@ -62,6 +62,22 @@ But we can also run the worker like this:
     php spark queue:work emails -priority low,high
 
 This way, worker will consume jobs with the `low` priority and then with `high`. The order set in the config file is override.
+
+### Delaying jobs
+
+Normally, when we add jobs to a queue, they are run in the order in which we added them to the queue (FIFO - first in, first out).
+Of course, there are also priorities, which we described in the previous section. But what about the scenario where we want to run a job, but not earlier than in 5 minutes?
+
+This is where job delay comes into play. We measure the delay in seconds.
+
+```php
+// This job will be run not sooner than in 5 minutes
+service('queue')->setDelay(5 * MINUTE)->push('emails', 'email', ['message' => 'Email sent no sooner than 5 minutes from now']);
+```
+
+Note that there is no guarantee that the job will run exactly in 5 minutes. If many new jobs are added to the queue (without a delay), it may take a long time before the delayed job is actually executed.
+
+We can also combine delayed jobs with priorities.
 
 ### Running many instances of the same queue
 

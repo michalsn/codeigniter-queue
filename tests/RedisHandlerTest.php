@@ -19,6 +19,7 @@ use CodeIgniter\Queue\Exceptions\QueueException;
 use CodeIgniter\Queue\Handlers\RedisHandler;
 use CodeIgniter\Test\ReflectionHelper;
 use Exception;
+use ReflectionException;
 use Tests\Support\Config\Queue as QueueConfig;
 use Tests\Support\Database\Seeds\TestRedisQueueSeeder;
 use Tests\Support\TestCase;
@@ -90,6 +91,27 @@ final class RedisHandlerTest extends TestCase
         $this->assertSame(1, $redis->zCard('queues:queue:high'));
 
         $task     = $redis->zRangeByScore('queues:queue:high', '-inf', Time::now()->timestamp, ['limit' => [0, 1]]);
+        $queueJob = new QueueJob(json_decode((string) $task[0], true));
+        $this->assertSame('success', $queueJob->payload['job']);
+        $this->assertSame(['key' => 'value'], $queueJob->payload['data']);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testPushWithDelay(): void
+    {
+        Time::setTestNow('2023-12-29 14:15:16');
+
+        $handler = new RedisHandler($this->config);
+        $result  = $handler->setDelay(MINUTE)->push('queue-delay', 'success', ['key' => 'value']);
+
+        $this->assertTrue($result);
+
+        $redis = self::getPrivateProperty($handler, 'redis');
+        $this->assertSame(1, $redis->zCard('queues:queue-delay:default'));
+
+        $task     = $redis->zRangeByScore('queues:queue-delay:default', '-inf', Time::now()->addSeconds(MINUTE)->timestamp, ['limit' => [0, 1]]);
         $queueJob = new QueueJob(json_decode((string) $task[0], true));
         $this->assertSame('success', $queueJob->payload['job']);
         $this->assertSame(['key' => 'value'], $queueJob->payload['data']);

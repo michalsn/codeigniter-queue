@@ -102,6 +102,27 @@ final class PredisHandlerTest extends TestCase
         $this->assertSame(['key' => 'value'], $queueJob->payload['data']);
     }
 
+    /**
+     * @throws ReflectionException
+     */
+    public function testPushWithDelay(): void
+    {
+        Time::setTestNow('2023-12-29 14:15:16');
+
+        $handler = new PredisHandler($this->config);
+        $result  = $handler->setDelay(MINUTE)->push('queue-delay', 'success', ['key' => 'value']);
+
+        $this->assertTrue($result);
+
+        $predis = self::getPrivateProperty($handler, 'predis');
+        $this->assertSame(1, $predis->zcard('queues:queue-delay:default'));
+
+        $task     = $predis->zrangebyscore('queues:queue-delay:default', '-inf', Time::now()->addSeconds(MINUTE)->timestamp, ['limit' => [0, 1]]);
+        $queueJob = new QueueJob(json_decode((string) $task[0], true));
+        $this->assertSame('success', $queueJob->payload['job']);
+        $this->assertSame(['key' => 'value'], $queueJob->payload['data']);
+    }
+
     public function testPushException(): void
     {
         $this->expectException(QueueException::class);
